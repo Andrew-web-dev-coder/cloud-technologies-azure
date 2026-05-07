@@ -1,4 +1,6 @@
 fastapi
 uvicorn
-pyodbc
 python-dotenv
+pyodbc
+pydantic
+azure-servicebus

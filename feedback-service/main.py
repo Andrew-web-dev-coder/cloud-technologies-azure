@@ -4,12 +4,19 @@ from fastapi import FastAPI, HTTPException
 from dotenv import load_dotenv
 from pydantic import BaseModel
 from typing import Optional
+from azure.servicebus import ServiceBusClient
+import threading
+import time
+import json
 
 load_dotenv()
 
+SERVICE_BUS_CONNECTION = os.getenv("SERVICE_BUS_CONNECTION")
+QUEUE_NAME = os.getenv("QUEUE_NAME")
+
 app = FastAPI(title="Feedback Service")
 
-SCHEMA_NAME = "aleksandr_feedback"
+SCHEMA_NAME = "Andrey_feedback"
 
 
 def get_connection():
@@ -37,6 +44,64 @@ class FeedbackCreate(BaseModel):
     reviewer_name: str
     comment: str
     rating: Optional[int] = 5
+
+
+def listen_to_queue():
+    while True:
+        try:
+            servicebus_client = ServiceBusClient.from_connection_string(
+                conn_str=SERVICE_BUS_CONNECTION
+            )
+
+            with servicebus_client:
+                receiver = servicebus_client.get_queue_receiver(
+                    queue_name=QUEUE_NAME,
+                    max_wait_time=5
+                )
+
+                with receiver:
+                    messages = receiver.receive_messages(
+                        max_message_count=10,
+                        max_wait_time=5
+                    )
+
+                    for message in messages:
+                        body = str(message)
+                        print(f"[SERVICE BUS] Received: {body}")
+
+                        data = json.loads(body)
+
+                        submission_id = data.get("submission_id")
+                        title = data.get("title")
+                        artist = data.get("artist")
+
+                        comment = f"Auto feedback created for submission '{title}' by {artist}"
+                        reviewer_name = "Service Bus Listener"
+                        rating = 5
+
+                        conn = get_connection()
+                        cursor = conn.cursor()
+
+                        cursor.execute(f"""
+                        INSERT INTO {SCHEMA_NAME}.feedbacks (submission_id, reviewer_name, comment, rating)
+                        VALUES (?, ?, ?, ?);
+                        """, submission_id, reviewer_name, comment, rating)
+
+                        conn.commit()
+                        cursor.close()
+                        conn.close()
+
+                        print(f"[DATABASE] Feedback saved for submission_id={submission_id}")
+
+                        receiver.complete_message(message)
+
+        except Exception as e:
+            print(f"[SERVICE BUS ERROR] {e}")
+
+        time.sleep(10)
+
+
+threading.Thread(target=listen_to_queue, daemon=True).start()
 
 
 @app.get("/")

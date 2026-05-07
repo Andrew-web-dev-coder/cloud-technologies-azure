@@ -4,12 +4,14 @@ from fastapi import FastAPI, HTTPException
 from dotenv import load_dotenv
 from pydantic import BaseModel
 from typing import Optional
+import json
+from azure.servicebus import ServiceBusClient, ServiceBusMessage
 
 load_dotenv()
 
 app = FastAPI(title="Submission Service")
 
-SCHEMA_NAME = "aleksandr_submission"
+SCHEMA_NAME = "Andrey_submission"
 
 
 def get_connection():
@@ -30,6 +32,20 @@ def get_connection():
     )
 
     return pyodbc.connect(connection_string)
+
+
+def send_submission_message(message_data: dict):
+    connection_string = os.getenv("SERVICE_BUS_SEND_CONNECTION_STRING")
+
+    if not connection_string:
+        raise Exception("SERVICE_BUS_SEND_CONNECTION_STRING is not set")
+
+    message_body = json.dumps(message_data)
+
+    with ServiceBusClient.from_connection_string(connection_string) as client:
+        with client.get_queue_sender(queue_name="andreiyeudakimau") as sender:
+            message = ServiceBusMessage(message_body)
+            sender.send_messages(message)
 
 
 class SubmissionCreate(BaseModel):
@@ -198,6 +214,16 @@ def create_submission(submission: SubmissionCreate):
         """, submission.title, submission.artist, submission.status)
 
         new_id = cursor.fetchone()[0]
+
+        message_data = {
+            "event_type": "submission_created",
+            "submission_id": new_id,
+            "title": submission.title,
+            "artist": submission.artist,
+            "status": submission.status
+        }
+
+        send_submission_message(message_data)
 
         conn.commit()
         cursor.close()

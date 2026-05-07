@@ -9,7 +9,7 @@ load_dotenv()
 
 app = FastAPI(title="Gallery Service")
 
-SCHEMA_NAME = "aleksandr_gallery"
+SCHEMA_NAME = "Andrey_gallery"
 
 
 def get_connection():
