@@ -3,3 +3,5 @@ uvicorn
 python-dotenv
 pyodbc
 pydantic
+pytest
+httpx
