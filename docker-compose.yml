@@ -1,0 +1,27 @@
+services:
+  submission-service:
+    build: ./submission-service
+    container_name: submission-service
+    ports:
+      - "8001:8001"
+    env_file:
+      - ./submission-service/.env
+    command: uvicorn main:app --host 0.0.0.0 --port 8001
+
+  feedback-service:
+    build: ./feedback-service
+    container_name: feedback-service
+    ports:
+      - "8002:8002"
+    env_file:
+      - ./feedback-service/.env
+    command: uvicorn main:app --host 0.0.0.0 --port 8002
+
+  gallery-service:
+    build: ./gallery-service
+    container_name: gallery-service
+    ports:
+      - "8003:8003"
+    env_file:
+      - ./gallery-service/.env
+    command: uvicorn main:app --host 0.0.0.0 --port 8003
