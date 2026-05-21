@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+python-dotenv
+pyodbc
+pydantic
+azure-servicebus
+pytest
+httpx

@@ -1,0 +1,25 @@
+trigger:
+- main
+- "*"
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '3.11'
+  displayName: 'Use Python 3.11'
+
+- script: |
+    python -m pip install --upgrade pip
+    pip install -r requirements.txt
+  displayName: 'Install dependencies'
+
+- script: |
+    python -m py_compile main.py
+  displayName: 'Static validation'
+
+- script: |
+    pytest
+  displayName: 'Run unit tests'
